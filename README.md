@@ -66,9 +66,128 @@ A potential solution may involve changing how reflective examples are constructe
 
 ---
 
-## Phase II: Reproduce and Plan
+## Phase II: Reproduce & Plan
 
-To be completed after Phase I.
+### Branch
+
+Working branch in my fork:
+https://github.com/Tirth2530/gepa/tree/fix-gepa-97-reflective-dataset
+
+### Local Setup
+
+I cloned my fork of the GEPA repository, created a new working branch, and set up a local Python virtual environment.
+
+Commands used:
+
+```bash
+git clone https://github.com/Tirth2530/gepa.git
+cd gepa
+git checkout -b fix-gepa-97-reflective-dataset
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -e ".[dev]"
+pip install dspy
+pip install -e ".[dev]"
+```
+
+After installing DSPy, I reinstalled GEPA in editable mode to make sure Python was using my local repository version instead of the package installed from PyPI.
+
+Verification:
+
+```bash
+python -c "import gepa; print(gepa.__file__)"
+```
+
+This pointed to my local repo path:
+
+```text
+/Users/tirth2530/Desktop/gepa/src/gepa/__init__.py
+```
+
+### Files Investigated
+
+I searched for `make_reflective_dataset` and found the relevant implementation in:
+
+```text
+src/gepa/adapters/dspy_full_program_adapter/full_program_adapter.py
+```
+
+The important function is:
+
+```text
+DspyAdapter.make_reflective_dataset
+```
+
+### Reproduction Steps
+
+I created a lightweight reproduction script:
+
+```text
+reproduce_gepa_97.py
+```
+
+The script builds a fake `eval_batch.trajectories` object shaped like what `DspyAdapter.make_reflective_dataset` expects. It does not call an actual LLM or require an API key. The goal was to isolate the reflective dataset construction behavior.
+
+To run the reproduction:
+
+```bash
+python reproduce_gepa_97.py
+```
+
+### Reproduction Evidence
+
+The script produced this key output:
+
+```text
+GEPA #97 reproduction
+============================================================
+Number of trace entries in reflective dataset: 3
+```
+
+It showed that `make_reflective_dataset` keeps all three trace entries inside `"Program Trace"`:
+
+1. The first trace entry contains the original question and first tool call.
+2. The second trace entry repeats earlier context through `previous_step`.
+3. The third trace entry includes `full_trajectory_so_far`, which again carries forward information from earlier steps.
+
+This supports the issue’s concern that for cumulative ReAct-style traces, later entries may already contain earlier information. Keeping every trace entry can send repeated context to the reflection LM.
+
+### Current Understanding
+
+In `make_reflective_dataset`, the code loops through `trace_instances` and appends each processed trace item into `trace_d`:
+
+```python
+trace_d.append(d)
+```
+
+Because of this, if the trace is cumulative, the reflective dataset may include repeated or overlapping information. For ReAct-style agents, each later step can already include previous reasoning/tool context, so including all trace entries may create redundant reflection data.
+
+### Implementation Plan
+
+My plan is to keep the change small and focused:
+
+1. Add a test or reproduction-style case that uses a cumulative ReAct-like trace.
+2. Confirm that the current behavior includes multiple repeated trace entries.
+3. Investigate whether the adapter should:
+
+   * keep only the final/full trajectory for reflection, or
+   * deduplicate repeated cumulative context, or
+   * add an optional setting so existing behavior stays backward-compatible.
+4. Prefer a minimal fix that reduces redundant trace data without changing unrelated adapter behavior.
+5. Run the reproduction script and relevant tests before opening a pull request.
+
+### Phase II Status
+
+Phase II reproduction and planning are complete. I have:
+
+* Set up the local development environment.
+* Created and pushed a working branch.
+* Located the relevant function.
+* Created a reproduction script.
+* Confirmed that multiple cumulative trace entries are kept in the reflective dataset.
+* Written an initial implementation plan.
+
 
 ---
 
