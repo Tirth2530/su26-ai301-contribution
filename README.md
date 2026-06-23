@@ -191,9 +191,34 @@ Phase II reproduction and planning are complete. I have:
 
 ---
 
-## Phase III: Implementation and Testing
+## Phase III: Build
 
-To be completed later.
+### Implementation Notes
+
+* Set up the GEPA development environment using `uv` with Python 3.11.
+* Reviewed `CONTRIBUTING.md`, installed pre-commit hooks, and ran the baseline test suite.
+* Updated `src/gepa/adapters/dspy_full_program_adapter/full_program_adapter.py`.
+
+### What I Changed
+
+For issue #97, I changed `make_reflective_dataset` so that when a normal cumulative trace has no `FailedPrediction`, GEPA keeps only the final trace entry instead of sending every cumulative entry into the reflection dataset.
+
+This avoids repeated earlier ReAct context while preserving the existing behavior for failed predictions.
+
+### Code Changes
+
+* Branch: https://github.com/Tirth2530/gepa/tree/fix-gepa-97-reflective-dataset
+* Draft PR: https://github.com/gepa-ai/gepa/pull/383
+* Implementation commit: `5df3b52` — Reduce redundant reflective trace context
+* Test commit: `143033b` — Add regression test for reflective trace selection
+
+### Testing Strategy
+
+* Added a regression test confirming that only the final trace entry is included when no failure exists.
+* Focused DSPy adapter tests: `8 passed`
+* Full test suite: `484 passed, 3 skipped`
+* Pre-commit checks passed for the changed files.
+
 
 ---
 
