@@ -222,6 +222,28 @@ This avoids repeated earlier ReAct context while preserving the existing behavio
 
 ---
 
-## Phase IV: Pull Request and Maintainer Feedback
+## Phase IV: Submit & Iterate
 
-To be completed later.
+### Pull Request
+
+* PR Link: https://github.com/gepa-ai/gepa/pull/383
+* Status: Iterating
+
+### Contribution Summary
+
+I fixed GEPA issue #97 by reducing redundant cumulative trace context in `DspyAdapter.make_reflective_dataset`. When there is no `FailedPrediction`, the reflective dataset now keeps only the final trace entry rather than repeating every cumulative step.
+
+I also added a regression test confirming that only the final trace entry is retained for normal cumulative traces.
+
+### Validation
+
+* Focused DSPy adapter tests: 8 passed
+* Full GEPA test suite: 484 passed, 3 skipped
+* Pre-commit checks passed
+
+### Maintainer Feedback
+
+* Lakshya A. Agrawal asked me to remove the standalone `reproduce_gepa_97.py` helper script. I removed it in commit `2bff64f`.
+* Lakshya asked whether the behavior was limited to ReAct. I explained that the issue can affect DSPy programs with cumulative trace entries, while ReAct makes the duplication especially visible.
+* Current next step: awaiting additional maintainer feedback.
+
