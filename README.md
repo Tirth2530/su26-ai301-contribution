@@ -247,3 +247,5 @@ I also added a regression test confirming that only the final trace entry is ret
 * Lakshya asked whether the behavior was limited to ReAct. I explained that the issue can affect DSPy programs with cumulative trace entries, while ReAct makes the duplication especially visible.
 * Current next step: awaiting additional maintainer feedback.
 
+### Week 5 Status: Phase IV / Iterating
+PR #383 is open. Initial maintainer feedback has been addressed. Currently waiting for further review.
