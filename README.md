@@ -249,3 +249,16 @@ I also added a regression test confirming that only the final trace entry is ret
 
 ### Week 5 Status: Phase IV / Iterating
 PR #383 is open. Initial maintainer feedback has been addressed. Currently waiting for further review.
+
+## Week 6 Check-In
+
+### Current Status
+
+I am continuing Phase IV / Iterating for GEPA PR #383.
+
+The PR is open and under review. I previously addressed initial maintainer feedback by removing the standalone `reproduce_gepa_97.py` helper script and responded to the reviewer’s question about whether the issue is specific to ReAct or applies more broadly to DSPy programs with cumulative traces.
+
+### Next Steps
+
+I am waiting for additional maintainer feedback. If another review comment is posted, I will respond and make any requested changes.
+
