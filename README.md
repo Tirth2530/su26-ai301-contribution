@@ -5,57 +5,84 @@
 **Name:** Tirth Thakkar
 **Program:** CodePath AI301 | AI Open Source Capstone
 **Role Goal:** AI/ML Engineer or Quant Researcher
+**GitHub:** https://github.com/Tirth2530
 
 ---
 
-## Phase I: Issue Selection
+## Project Overview
 
-### Status
+For my AI301 open source contribution, I worked on GEPA, an open-source framework for optimizing AI programs. My selected issue focused on reducing redundant reflective dataset context for DSPy/ReAct-style traces.
+
+The main contribution was a small adapter-level fix in GEPA’s DSPy full program adapter. The fix changes how normal cumulative traces are selected for reflection: when there is no failed prediction, the reflective dataset now keeps only the final trace entry instead of including every cumulative trace entry.
+
+---
+
+# Phase I: Issue Selection
+
+## Status
 
 Phase I Complete
 
 ---
 
-### Selected Issue
+## Selected Issue
 
 **Issue Title:** Reflective dataset contains potentially redundant data for ReAct agent
-**Repository:** gepa-ai/gepa
+**Repository:** `gepa-ai/gepa`
 **Issue Link:** https://github.com/gepa-ai/gepa/issues/97
+**Fork:** https://github.com/Tirth2530/gepa
+**Working Branch:** https://github.com/Tirth2530/gepa/tree/fix-gepa-97-reflective-dataset
 
 ---
 
-### Problem Summary
+## Problem Summary
 
-This issue focuses on redundant trajectory data being included in GEPA’s reflective dataset for a ReAct agent. In the current behavior, multiple trace entries appear to repeat previous context, observations, and intermediate steps, which can cause the reflection language model to process more tokens than necessary.
+GEPA creates reflective datasets that help a language model improve AI programs by analyzing previous execution traces. In issue #97, the concern was that reflective datasets for ReAct-style agents may contain redundant trace data.
 
-This matters because repeated trajectory data can make LLM-based reflection more expensive and less scalable, especially when the agent has a large initial context. A better reflective dataset structure could help preserve the important trajectory information while reducing unnecessary token usage.
+For a multi-step ReAct agent, later trace entries can already include earlier reasoning, observations, and tool-use context. If GEPA includes every cumulative trace entry in the reflection dataset, the reflection model may receive repeated information. This can increase token usage and make reflection less efficient.
 
----
-
-### Why I Chose This Issue
-
-I chose this issue because it connects directly to my goal of becoming an AI/ML engineer. The issue involves LLM agents, ReAct-style reasoning, reflective datasets, and token-efficiency optimization, which are all highly relevant to modern applied AI systems.
-
-I also chose it because the issue is labeled as a good first issue, has a clear problem description, and includes enough context to begin investigating. Compared to a documentation-only contribution, this issue gives me a chance to work on real AI infrastructure and understand how agent trajectories are represented and optimized.
-
-From a career perspective, this contribution also gives me a strong project story: improving the efficiency of an open-source AI optimization framework by investigating redundant data in an LLM reflection pipeline.
+In simpler terms, the issue is that the reflection data can repeat the same earlier agent steps multiple times. The goal is to preserve useful trajectory information while avoiding unnecessary duplication.
 
 ---
 
-### Initial Understanding
+## Why I Chose This Issue
 
-From reading the issue, I understand that `make_reflective_dataset` may currently create multiple trace entries where later entries repeat information from earlier entries. For a multi-step ReAct agent, this can lead to cumulative context being passed repeatedly into the reflection process.
+I chose this issue because it connects directly to my goal of becoming an AI/ML engineer. The issue involves LLM agents, ReAct-style reasoning, DSPy traces, reflective datasets, and token-efficiency optimization. These are all relevant to modern applied AI systems.
 
-A potential solution may involve changing how reflective examples are constructed so the reflection model receives the most useful trajectory information without unnecessary repetition. Before implementing anything, I will reproduce the issue locally and inspect the relevant adapter logic.
+I also chose this issue because it was a good balance between being approachable and technically meaningful. It was not just a documentation update. It required me to inspect actual library code, understand how traces are represented, reproduce the behavior, implement a fix, add a regression test, and communicate with a maintainer.
+
+From a career perspective, this contribution gives me a strong project story: I improved the efficiency of an open-source AI optimization framework by reducing redundant context in an LLM reflection pipeline.
 
 ---
 
-### Phase I Checklist
+## Initial Understanding
+
+From reading the issue, I understood that `make_reflective_dataset` may create multiple trace entries where later entries repeat information from earlier entries. For a multi-step ReAct-style agent, this can lead to cumulative context being passed repeatedly into the reflection process.
+
+My initial hypothesis was that the redundant context was not caused by the ReAct agent alone, but by how GEPA’s DSPy adapter selected trace entries for the reflective dataset. I planned to verify this by inspecting the adapter code and creating a small reproduction.
+
+---
+
+## Issue Selection Quality Checks
+
+I confirmed the issue was appropriate for this contribution cycle:
+
+* The issue was open.
+* No one was assigned to it.
+* There was no linked pull request already solving it.
+* The repository was active and maintained.
+* The repository had a usable development setup.
+* The issue matched my skills and learning goals.
+* The issue was small enough to investigate and submit within the AI301 timeline.
+
+---
+
+## Phase I Checklist
 
 * [x] Selected a live GitHub issue
 * [x] Confirmed the issue is open
 * [x] Confirmed no one is assigned
-* [x] Confirmed there are no linked pull requests or branches
+* [x] Confirmed there are no linked pull requests or branches solving it
 * [x] Commented on the GitHub issue expressing interest
 * [x] Commented on the CodePath issue sheet row
 * [x] Forked the repository
@@ -66,46 +93,68 @@ A potential solution may involve changing how reflective examples are constructe
 
 ---
 
-## Phase II: Reproduce & Plan
+# Phase II: Reproduce and Plan
 
-### Branch
+## Status
+
+Phase II Complete
+
+---
+
+## Branch
 
 Working branch in my fork:
+
 https://github.com/Tirth2530/gepa/tree/fix-gepa-97-reflective-dataset
 
-### Local Setup
+---
 
-I cloned my fork of the GEPA repository, created a new working branch, and set up a local Python virtual environment.
+## Environment Setup
 
-Commands used:
+I set up GEPA locally and moved to the recommended `uv`-based development workflow.
+
+Initial commands used:
 
 ```bash
 git clone https://github.com/Tirth2530/gepa.git
 cd gepa
 git checkout -b fix-gepa-97-reflective-dataset
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-pip install -e ".[dev]"
-pip install dspy
-pip install -e ".[dev]"
 ```
 
-After installing DSPy, I reinstalled GEPA in editable mode to make sure Python was using my local repository version instead of the package installed from PyPI.
-
-Verification:
+I first attempted a regular virtual environment setup, but later switched to the repository’s recommended setup using `uv` and Python 3.11:
 
 ```bash
-python -c "import gepa; print(gepa.__file__)"
+uv sync --extra dev --python 3.11
+uv run pre-commit install
+uv run pytest tests/
 ```
 
-This pointed to my local repo path:
+The baseline test suite ran successfully before my implementation work.
+
+One setup challenge was related to DSPy. Some DSPy adapter tests use `pytest.importorskip("dspy")`, so those tests are skipped unless DSPy is installed. To run the relevant adapter tests, I installed DSPy and then reinstalled GEPA in editable mode to make sure Python used my local branch:
+
+```bash
+uv pip install dspy
+uv pip install -e .
+```
+
+I verified that GEPA was importing from my local repository:
+
+```bash
+uv run python -c "import gepa; print(gepa.__file__)"
+```
+
+The output pointed to my local repo path:
 
 ```text
 /Users/tirth2530/Desktop/gepa/src/gepa/__init__.py
 ```
 
-### Files Investigated
+This confirmed that my tests were running against my local implementation, not only against an installed package version.
+
+---
+
+## Files and Functions Investigated
 
 I searched for `make_reflective_dataset` and found the relevant implementation in:
 
@@ -113,142 +162,415 @@ I searched for `make_reflective_dataset` and found the relevant implementation i
 src/gepa/adapters/dspy_full_program_adapter/full_program_adapter.py
 ```
 
-The important function is:
+The main function involved in the issue was:
 
 ```text
 DspyAdapter.make_reflective_dataset
 ```
 
-### Reproduction Steps
+I also inspected the nearby DSPy adapter tests in:
 
-I created a lightweight reproduction script:
+```text
+tests/test_dspy_full_program_adapter.py
+```
+
+This helped me understand the project’s existing test patterns and how to add a focused regression test without introducing a completely separate testing style.
+
+---
+
+## Reproduction Steps
+
+I created a lightweight local reproduction script during investigation:
 
 ```text
 reproduce_gepa_97.py
 ```
 
-The script builds a fake `eval_batch.trajectories` object shaped like what `DspyAdapter.make_reflective_dataset` expects. It does not call an actual LLM or require an API key. The goal was to isolate the reflective dataset construction behavior.
+This script built a fake `eval_batch.trajectories` object shaped like what `DspyAdapter.make_reflective_dataset` expects. It did not call an actual LLM and did not require an API key. The goal was to isolate reflective dataset construction behavior.
 
-To run the reproduction:
+Reproduction process:
 
-```bash
-python reproduce_gepa_97.py
-```
+1. Create a mock trajectory with multiple trace entries.
+2. Make each later trace entry represent a cumulative step that carries forward earlier context.
+3. Pass the trajectory into `DspyAdapter.make_reflective_dataset`.
+4. Inspect the resulting `"Program Trace"` field in the reflective dataset.
+5. Confirm whether all trace entries were preserved.
 
-### Reproduction Evidence
+The script was useful for investigation, but it was later removed from the final PR after maintainer feedback because it was a standalone helper file rather than a permanent test.
 
-The script produced this key output:
+---
+
+## Actual Behavior
+
+Before the fix, normal traces without `FailedPrediction` were passed into the reflective dataset with all trace entries included.
+
+For cumulative ReAct-style traces, this means earlier context can appear repeatedly. For example:
+
+* Trace entry 1 may contain the first reasoning/tool step.
+* Trace entry 2 may include step 2 plus earlier context.
+* Trace entry 3 may include the final state plus earlier context again.
+
+Because `make_reflective_dataset` preserved every trace entry, the reflection data could contain repeated or overlapping trajectory information.
+
+---
+
+## Expected Behavior
+
+For normal traces with no `FailedPrediction`, the reflective dataset should keep only the final trace entry.
+
+The final trace entry is the most useful for cumulative traces because it represents the complete final state of the trajectory. Keeping only that final entry reduces redundant context while preserving the important information needed for reflection.
+
+For traces with a `FailedPrediction`, the existing behavior should remain unchanged. The failed trace entry is important because it points directly to where the prediction failed and can help GEPA generate useful feedback.
+
+---
+
+## Root Cause
+
+The root cause was in the trace selection logic inside `DspyAdapter.make_reflective_dataset`.
+
+The method already had special handling for `FailedPrediction`:
+
+* If a `FailedPrediction` was found, the method selected that failed trace entry.
+* If no `FailedPrediction` was found, the method left `trace_instances` unchanged.
+
+That meant all trace entries were included in the reflective dataset for normal successful traces. For cumulative traces, this caused redundant context.
+
+The issue was not that ReAct itself was wrong. ReAct made the redundancy especially visible because ReAct traces often carry forward earlier reasoning and observations. The adapter-level behavior could affect any DSPy program that produces cumulative trace entries.
+
+---
+
+## UMPIR Plan
+
+### Understand
+
+Issue #97 reported redundant reflective dataset context for ReAct-style traces. The concern was that later entries already include earlier context, but GEPA was including every entry in the reflection data.
+
+### Match
+
+The relevant code path was `DspyAdapter.make_reflective_dataset` in:
 
 ```text
-GEPA #97 reproduction
-============================================================
-Number of trace entries in reflective dataset: 3
+src/gepa/adapters/dspy_full_program_adapter/full_program_adapter.py
 ```
 
-It showed that `make_reflective_dataset` keeps all three trace entries inside `"Program Trace"`:
+The relevant behavior was the selection of `trace_instances` before the program trace was converted into reflection data.
 
-1. The first trace entry contains the original question and first tool call.
-2. The second trace entry repeats earlier context through `previous_step`.
-3. The third trace entry includes `full_trajectory_so_far`, which again carries forward information from earlier steps.
+### Plan
 
-This supports the issue’s concern that for cumulative ReAct-style traces, later entries may already contain earlier information. Keeping every trace entry can send repeated context to the reflection LM.
+Make the smallest possible change:
 
-### Current Understanding
+* Preserve the existing `FailedPrediction` behavior.
+* If no failed prediction exists, keep only the final trace entry.
+* Avoid changing unrelated adapter behavior.
+* Add a regression test to prevent the issue from returning.
 
-In `make_reflective_dataset`, the code loops through `trace_instances` and appends each processed trace item into `trace_d`:
+### Implement
+
+Modify the non-failure path so that:
 
 ```python
-trace_d.append(d)
+trace_instances = trace_instances[-1:]
 ```
 
-Because of this, if the trace is cumulative, the reflective dataset may include repeated or overlapping information. For ReAct-style agents, each later step can already include previous reasoning/tool context, so including all trace entries may create redundant reflection data.
+is used when no `FailedPrediction` is selected.
 
-### Implementation Plan
+### Review
 
-My plan is to keep the change small and focused:
+Review the diff carefully to make sure:
 
-1. Add a test or reproduction-style case that uses a cumulative ReAct-like trace.
-2. Confirm that the current behavior includes multiple repeated trace entries.
-3. Investigate whether the adapter should:
+* The failure path is unchanged.
+* The normal non-failure path now keeps only the final trace entry.
+* No unrelated files or formatting-only changes remain in the final PR.
 
-   * keep only the final/full trajectory for reflection, or
-   * deduplicate repeated cumulative context, or
-   * add an optional setting so existing behavior stays backward-compatible.
-4. Prefer a minimal fix that reduces redundant trace data without changing unrelated adapter behavior.
-5. Run the reproduction script and relevant tests before opening a pull request.
+### Evaluate
 
-### Phase II Status
+Run:
 
-Phase II reproduction and planning are complete. I have:
+```bash
+uv run pytest tests/test_dspy_full_program_adapter.py
+uv run pytest tests/
+```
 
-* Set up the local development environment.
-* Created and pushed a working branch.
-* Located the relevant function.
-* Created a reproduction script.
-* Confirmed that multiple cumulative trace entries are kept in the reflective dataset.
-* Written an initial implementation plan.
-
+Also run pre-commit checks and confirm the PR checks pass on GitHub.
 
 ---
 
-## Phase III: Build
+## Phase II Checklist
 
-### Implementation Notes
-
-* Set up the GEPA development environment using `uv` with Python 3.11.
-* Reviewed `CONTRIBUTING.md`, installed pre-commit hooks, and ran the baseline test suite.
-* Updated `src/gepa/adapters/dspy_full_program_adapter/full_program_adapter.py`.
-
-### What I Changed
-
-For issue #97, I changed `make_reflective_dataset` so that when a normal cumulative trace has no `FailedPrediction`, GEPA keeps only the final trace entry instead of sending every cumulative entry into the reflection dataset.
-
-This avoids repeated earlier ReAct context while preserving the existing behavior for failed predictions.
-
-### Code Changes
-
-* Branch: https://github.com/Tirth2530/gepa/tree/fix-gepa-97-reflective-dataset
-* Draft PR: https://github.com/gepa-ai/gepa/pull/383
-* Implementation commit: `5df3b52` — Reduce redundant reflective trace context
-* Test commit: `143033b` — Add regression test for reflective trace selection
-
-### Testing Strategy
-
-* Added a regression test confirming that only the final trace entry is included when no failure exists.
-* Focused DSPy adapter tests: `8 passed`
-* Full test suite: `484 passed, 3 skipped`
-* Pre-commit checks passed for the changed files.
-
+* [x] Set up the local development environment
+* [x] Created and pushed a working branch
+* [x] Located the relevant function
+* [x] Created a lightweight reproduction
+* [x] Identified expected vs. actual behavior
+* [x] Identified the root cause
+* [x] Wrote an implementation plan using UMPIR
+* [x] Submitted Phase II check-in
 
 ---
 
-## Phase IV: Submit & Iterate
+# Phase III: Build
 
-### Pull Request
+## Status
 
-* PR Link: https://github.com/gepa-ai/gepa/pull/383
-* Status: Iterating
+Phase III Complete
 
-### Contribution Summary
+---
 
-I fixed GEPA issue #97 by reducing redundant cumulative trace context in `DspyAdapter.make_reflective_dataset`. When there is no `FailedPrediction`, the reflective dataset now keeps only the final trace entry rather than repeating every cumulative step.
+## Implementation Notes
 
-I also added a regression test confirming that only the final trace entry is retained for normal cumulative traces.
+I implemented the fix in:
 
-### Validation
+```text
+src/gepa/adapters/dspy_full_program_adapter/full_program_adapter.py
+```
 
-* Focused DSPy adapter tests: 8 passed
-* Full GEPA test suite: 484 passed, 3 skipped
-* Pre-commit checks passed
+The original behavior selected a failed trace entry if a `FailedPrediction` was present. If there was no failed prediction, it kept all trace entries.
 
-### Maintainer Feedback
+I changed the non-failure path so that when no `FailedPrediction` exists, GEPA keeps only the final trace entry:
 
-* Lakshya A. Agrawal asked me to remove the standalone `reproduce_gepa_97.py` helper script. I removed it in commit `2bff64f`.
-* Lakshya asked whether the behavior was limited to ReAct. I explained that the issue can affect DSPy programs with cumulative trace entries, while ReAct makes the duplication especially visible.
-* Current next step: awaiting additional maintainer feedback.
+```python
+if selected is not None:
+    trace_instances = [selected]
+else:
+    trace_instances = trace_instances[-1:]
+```
 
-### Week 5 Status: Phase IV / Iterating
-PR #383 is open. Initial maintainer feedback has been addressed. Currently waiting for further review.
+This keeps the implementation small and focused. It preserves the existing failed-prediction behavior while reducing redundant cumulative context for normal traces.
+
+---
+
+## Code Changes
+
+Branch:
+
+```text
+https://github.com/Tirth2530/gepa/tree/fix-gepa-97-reflective-dataset
+```
+
+Pull Request:
+
+```text
+https://github.com/gepa-ai/gepa/pull/383
+```
+
+Key commits:
+
+```text
+5df3b52 - Reduce redundant reflective trace context
+143033b - Add regression test for reflective trace selection
+2bff64f - Remove standalone reproduction script
+```
+
+Files changed in the final PR:
+
+```text
+src/gepa/adapters/dspy_full_program_adapter/full_program_adapter.py
+tests/test_dspy_full_program_adapter.py
+```
+
+The standalone reproduction helper file was removed from the final PR after maintainer feedback.
+
+---
+
+## Regression Test
+
+I added a regression test in:
+
+```text
+tests/test_dspy_full_program_adapter.py
+```
+
+The test creates a multi-entry cumulative trace and confirms that the reflective dataset keeps only the final entry when there is no failure.
+
+The test specifically checks that:
+
+* A trace can contain multiple entries.
+* No `FailedPrediction` is present.
+* `make_reflective_dataset` returns a program trace with length 1.
+* The remaining trace entry corresponds to the final generated output.
+
+This directly exercises the fixed code path.
+
+---
+
+## Testing Strategy
+
+Automated tests:
+
+```bash
+uv run pytest tests/test_dspy_full_program_adapter.py
+```
+
+Result:
+
+```text
+8 passed
+```
+
+Full test suite:
+
+```bash
+uv run pytest tests/
+```
+
+Result:
+
+```text
+484 passed, 3 skipped
+```
+
+Pre-commit checks also passed for the changed files.
+
+---
+
+## Manual Testing and Review
+
+In addition to automated tests, I manually reviewed the changed logic to confirm:
+
+* The `FailedPrediction` path still selects the failed trace entry.
+* The non-failure path keeps only the final trace entry.
+* The final PR diff only includes the adapter change and the regression test.
+* The local GEPA import path pointed to my local repository.
+* The temporary reproduction script was removed from the final PR after reviewer feedback.
+
+---
+
+## Challenges Faced
+
+One challenge was setting up the environment correctly. The repository uses `uv`, and some DSPy adapter tests are skipped unless DSPy is installed. I had to install DSPy and then reinstall GEPA in editable mode so tests would run against my local branch.
+
+Another challenge was deciding how broad the fix should be. I wanted to avoid changing unrelated trace behavior, so I kept the implementation narrowly scoped to the adapter’s trace selection logic.
+
+A third challenge was understanding how to handle the reproduction script. It was helpful during investigation, but the maintainer correctly pointed out that it should not be included in the final PR. I removed it in a follow-up commit.
+
+---
+
+## Phase III Checklist
+
+* [x] Implemented the source-code fix
+* [x] Added a regression test
+* [x] Ran focused adapter tests
+* [x] Ran the full test suite
+* [x] Ran pre-commit checks
+* [x] Documented files changed and key commits
+* [x] Documented testing strategy
+* [x] Documented challenges faced
+* [x] Submitted Phase III check-in
+
+---
+
+# Phase IV: Submit and Iterate
+
+## Status
+
+Phase IV Complete / Iterating
+
+---
+
+## Pull Request
+
+**PR Link:** https://github.com/gepa-ai/gepa/pull/383
+**Current Status:** Iterating
+
+---
+
+## PR Description
+
+This PR fixes GEPA issue #97 by reducing redundant cumulative trace context in `DspyAdapter.make_reflective_dataset`.
+
+When no `FailedPrediction` is present, the reflective dataset now keeps only the final trace entry instead of including every cumulative trace entry. This prevents earlier steps from being repeated in the reflection context.
+
+The existing behavior for failures is preserved: when a `FailedPrediction` exists, that failed trace entry is still selected.
+
+---
+
+## Issue Reference
+
+```text
+Fixes #97
+```
+
+---
+
+## Acceptance Criteria
+
+* [x] Pull request opened against upstream `gepa-ai/gepa`
+* [x] PR is no longer a draft
+* [x] PR targets the upstream default branch
+* [x] PR description explains the problem and the solution
+* [x] PR description references the issue with `Fixes #97`
+* [x] Regression test added
+* [x] Focused adapter tests pass
+* [x] Full GEPA test suite passes locally
+* [x] Pre-commit checks passed
+* [x] Initial maintainer feedback addressed
+* [x] Current status documented in README
+
+---
+
+## Validation
+
+```text
+uv run pytest tests/test_dspy_full_program_adapter.py → 8 passed
+uv run pytest tests/ → 484 passed, 3 skipped
+Pre-commit checks passed
+```
+
+---
+
+## Maintainer Feedback Log
+
+### Feedback 1
+
+Reviewer asked me to remove the standalone `reproduce_gepa_97.py` helper script from the PR.
+
+Response:
+
+I removed the file in commit:
+
+```text
+2bff64f - Remove standalone reproduction script
+```
+
+Reason:
+
+The reproduction file was useful during local investigation, but it was not part of the permanent source-code fix or regression test suite.
+
+---
+
+### Feedback 2
+
+Reviewer asked whether the issue was specific to ReAct or applied more broadly.
+
+Response:
+
+I explained that ReAct makes the redundancy especially visible, but the adapter-level behavior can affect any DSPy program that produces cumulative trace entries. The fix is therefore implemented at the adapter level while still preserving the existing failed-prediction behavior.
+
+---
+
+## Current Next Steps
+
+The PR is open, checks are passing, and initial maintainer feedback has been addressed. I am waiting for additional maintainer feedback.
+
+If a reviewer requests more changes, I will respond professionally, make the requested updates in my branch, push a follow-up commit, and document the change here.
+
+---
+
+# Weekly Check-Ins
+
+## Week 5 Check-In
+
+### Current Status
+
+I am continuing Phase IV / Iterating for GEPA PR #383.
+
+The PR is open and under review. Initial maintainer feedback has been addressed by removing the standalone reproduction script and responding to the reviewer’s question about whether the issue is specific to ReAct or applies more broadly to DSPy cumulative traces.
+
+### Next Steps
+
+I am waiting for additional maintainer feedback.
+
+---
 
 ## Week 6 Check-In
 
@@ -261,6 +583,9 @@ The PR is open and under review. I previously addressed initial maintainer feedb
 ### Next Steps
 
 I am waiting for additional maintainer feedback. If another review comment is posted, I will respond and make any requested changes.
+
+---
+
 ## Week 7 Check-In
 
 ### Current Status
@@ -273,3 +598,43 @@ The PR is still open and under review. The initial maintainer feedback has alrea
 
 I am continuing to monitor the pull request for additional maintainer feedback. If another review comment is posted, I will respond professionally and make any requested updates.
 
+---
+
+## Week 8 Check-In
+
+### Current Status
+
+I am continuing Phase IV / Iterating for GEPA PR #383.
+
+The PR remains open and review-ready. The implementation change and regression test are still in place, all GitHub checks are passing, and the initial maintainer feedback has already been addressed.
+
+At this stage, I am not making additional code changes unless the reviewer requests them. This keeps the PR focused and avoids unnecessary changes while it is under review.
+
+### Next Steps
+
+I will continue monitoring the PR for maintainer feedback. If a reviewer asks for another change, I will update the branch, push a follow-up commit, and document the response in this README.
+
+---
+
+# Learnings and Reflections
+
+This contribution helped me understand the full open-source workflow from issue selection to pull request review. I learned that solving an issue is not only about writing code. It also requires reproducing the behavior, understanding the project’s existing design, writing a focused fix, adding tests, and communicating clearly with maintainers.
+
+Technically, I learned more about how GEPA builds reflective datasets and how DSPy program traces can be represented. I also learned why cumulative traces can create redundant context for reflection and why reducing repeated context can matter for token efficiency.
+
+The hardest part was identifying the correct level for the fix. I did not want to make a broad change that could affect unrelated behavior. I chose a narrow adapter-level change that preserves the failed-prediction path while changing the normal non-failure trace selection behavior.
+
+I also learned that reproduction scripts are useful during investigation, but they should not always be included in the final pull request. A maintainer asked me to remove the standalone reproduction script, and I handled that feedback by removing it while keeping the actual implementation and regression test.
+
+If I did this again, I would document my setup, expected-vs-actual behavior, and testing notes more clearly from the beginning. I would also check the grading rubric earlier so my README matched the expected structure more closely throughout the process.
+
+---
+
+# Final Status
+
+* Phase I: Complete
+* Phase II: Complete
+* Phase III: Complete
+* Phase IV: Complete / Iterating
+* Current PR: https://github.com/gepa-ai/gepa/pull/383
+* Current PR status: Open and awaiting additional maintainer feedback
